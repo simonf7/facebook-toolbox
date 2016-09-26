@@ -1,0 +1,15 @@
+/* styles.css */
+
+/* smaller text */
+.fbt_smaller {
+	font-size: 0.8em;
+}
+
+/* summary for facebook */
+.fbt_summary {
+	background-color: rgba(64, 64, 192, 0.25);
+}
+/* hide the facebook details by default */
+.fbt_hidden {
+	display: none;
+}
