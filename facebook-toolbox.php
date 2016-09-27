@@ -9,10 +9,10 @@ Author URI: http://www.simonfoster.co.uk
 */
 
 
-// pull out the options
+/** pull out the options from Wordpress */
 $fbt_options = get_option('fbt_options');
 
-// define plugin defaults
+/** define plugin defaults using the Wordpress options */
 DEFINE('FBT_APP_ID', $fbt_options['fbt_app_id']);
 DEFINE('FBT_APP_SECRET', $fbt_options['fbt_app_secret']);
 
@@ -30,39 +30,32 @@ else {
 }
 
 
-// register stylesheet
+/**
+ * Register stylesheet
+ *
+ * Function used to add the stylesheet to the output from Wordpress.
+ *
+ * @return void
+ */
 function fbt_add_stylesheet() {
 	wp_enqueue_style('facebook-toolbox', plugins_url('facebook-toolbox.css', __FILE__), false, '0.0.2', 'all');
 }
 add_action('wp_enqueue_scripts', 'fbt_add_stylesheet', 99999);
 
-// tell wordpress to register the shortcode
+/** tell wordpress to register the shortcode */
 add_shortcode('fbt-text', 'fbt_text_handler');
 add_shortcode('fbt-status', 'fbt_status_handler');
 
 
-
-/** Initialise the Facebook Graph-API SDK
+/**
+ * Access the Facebook Graph API
+ *
+ * Send a query to the Facebook Graph API and return the response as a PHP object.
+ *
+ * @param string $url The query to send to Facebook.
+ *
+ * @return object The response from Facebook, using json_encode to change it to an object.
  */
-
-function fbt_initialise()
-{
-	require_once __DIR__ . '/vendor/autoload.php';
-
-	$fb = new Facebook\Facebook([
-		'app_id'				=> FBT_APP_ID, 
-		'app_secret'			=> FBT_APP_SECRET,
-		'default_graph_version'	=> 'v2.7'
-	]);
-
-	$fb->setDefaultAccessToken(FBT_APP_ID . '|' . FBT_APP_SECRET);
-
-	return $fb;
-}
-
-
-
-// access the Facebook Graph API
 function fbt_api($url)
 {
 	$curl = curl_init();
@@ -75,8 +68,15 @@ function fbt_api($url)
 }
 
 
-
-// handle the facebook text
+/**
+ * The handler for [fbt-text post=<id>] shortcode
+ *
+ * Access a Facebook post and return the text entered in it.
+ *
+ * @param array $arrParameters A list of options within the shortcode,namely the post to query.
+ *
+ * @return string The message retrieved from Facebook.
+ */
 function fbt_text_handler($arrParameters)
 {
 	$data = fbt_api($arrParameters['post']);
@@ -89,8 +89,16 @@ function fbt_text_handler($arrParameters)
 }
 
 
-
-// handle the facebook status
+/**
+ * The handler for [fbt-status post=<id>] shortcode
+ *
+ * Access a Facebook post and retrieve the Likes and Comments, outputting a summary plus detail
+ * detail in a hidden div which can be displayed by clicking the summary.
+ *
+ * @param array $arrParameters A list of options within the shortcode,namely the post to query.
+ *
+ * @return string The data retrieved from Facebook.
+ */
 function fbt_status_handler($arrParameters)
 {
 	$likes = fbt_api($arrParameters['post'] . '/likes');
@@ -120,7 +128,7 @@ function fbt_status_handler($arrParameters)
 		$detail = '<p>' . $detail . '</p>';
 	}
 
-	// depending on the comments, express the detail
+	/** depending on the comments, express the detail */
 	if (count($comments->data)>0) {
 		foreach ($comments->data as $comment) {
 			$detail .= '<hr>';
@@ -138,22 +146,27 @@ function fbt_status_handler($arrParameters)
 }
 
 
+/**
+ * The functions used to create the options screens within the Wordpress admin area
+ */
 
-/***************************************************************************
- *
- * OPTIONS
- *
- ***************************************************************************/
-
-// register the menu function
+/** register the menu function */
 add_action('admin_menu', 'fbt_plugin_menu');
 
-// the menu function
+/**
+ * Create the menu entry in the settings section.
+ *
+ * @return void
+ */
 function fbt_plugin_menu() {
 	add_options_page('Facebook Toolbox Settings', 'Facebook Toolbox', 'manage_options', 'fbt_options', 'fbt_plugin_options');
 }
 
-// menu options
+/**
+ * Render the settings for the plugin.
+ *
+ * @return void
+ */
 function fbt_plugin_options() {
 	if (!current_user_can('manage_options')) {
 		wp_die(__('You do not have sufficient permissions to access this page.'));
@@ -171,27 +184,52 @@ function fbt_plugin_options() {
 <?php
 }
 
-// register the settings
+/** Register the settings with Wordpress */
 add_action('admin_init', 'fbt_admin_init');
 
+/**
+ * Render the introductory text for the main settings.
+ *
+ * return @void
+ */
 function fbt_main_section_text() {
 	echo '<p>Please enter your Facebook App details for accessing Facebook.</p>';
 }
 
+/**
+ * Render the text box for entering the Facebook App ID.
+ *
+ * return @void
+ */
 function fbt_app_id_string() {
 	$options = get_option('fbt_options');
 	echo '<input id="fbt_app_id_string" name="fbt_options[fbt_app_id]" size="40" type="text" value="' . $options['fbt_app_id'] . '" />';
 }
 
+/**
+ * Render the text box for entering the Facebook App secret.
+ *
+ * return @void
+ */
 function fbt_app_secret_string() {
 	$options = get_option('fbt_options');
 	echo '<input id="fbt_app_secret_string" name="fbt_options[fbt_app_secret]" size="40" type="text" value="' . $options['fbt_app_secret'] . '" />';
 }
 
+/** 
+ * Render introductory text for the debug settings.
+ *
+ * return @void
+ */
 function fbt_debug_section_text() {
 	echo '<p>In order for the plugin to use the specified date and year make sure the debug mode option is ticked.</p>';
 }
 
+/**
+ * Render the checkbox for selecting debugging.
+ *
+ * return @void
+ */
 function fbt_debug_tick() {
 	$options = get_option('fbt_options');
 	echo '<input id="fbt_debug_tick" name="fbt_options[debug_tick]" type="checkbox" value="yes"';
@@ -201,10 +239,20 @@ function fbt_debug_tick() {
 	echo ' />';
 }
 
+/** 
+ * Render introductory text for the cache settings.
+ *
+ * return @void
+ */
 function fbt_cache_section_text() {
 	echo '<p>If you would like to turn off the cache, please tick the option below.</p>';
 }
 
+/**
+ * Render the checkbox for selecting caching.
+ *
+ * return @void
+ */
 function fbt_cache_tick() {
 	$options = get_option('fbt_options');
 	echo '<input id="fbt_cache_tick" name="fbt_options[cache_tick]" type="checkbox" value="yes"';
@@ -214,6 +262,11 @@ function fbt_cache_tick() {
 	echo ' />';
 }
 
+/**
+ * Register all the sections that make up the settings screen for the plugin.
+ *
+ * return @void
+ */
 function fbt_admin_init() {
 	register_setting('fbt_options', 'fbt_options', 'fbt_options_validate');
 	add_settings_section('fbt_main', 'Access Settings', 'fbt_main_section_text', 'fbt_plugin');
@@ -225,6 +278,11 @@ function fbt_admin_init() {
 	add_settings_field('fbt_cache_tick', 'Disable Cache', 'fbt_cache_tick', 'fbt_plugin', 'fbt_cache');
 }
 
+/**
+ * Take the entered settings and validate them ready for storing.
+ *
+ * return array Validated set of options for Wordpress to save to it's database.
+ */
 function fbt_options_validate($input) {
 	$options = get_option('fbt_options');
 	$options['fbt_app_id'] = $input['fbt_app_id'];
