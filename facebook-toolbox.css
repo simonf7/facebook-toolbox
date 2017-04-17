@@ -1,5 +1,11 @@
 /* styles.css */
 
+/* container */
+.fbt_container {
+	background-color: white;
+	margin-bottom: 1em;
+}
+
 /* smaller text */
 .fbt_smaller {
 	font-size: 0.8em;
@@ -8,8 +14,37 @@
 /* summary for facebook */
 .fbt_summary {
 	background-color: rgba(64, 64, 192, 0.25);
+	padding: 4px;
 }
+
+.fbt_summary img {
+	vertical-align: middle;
+	margin-right: 1em;
+}
+
+.fbt_summary span {
+	vertical-align: middle;
+}
+
+.fbt_comment, .fbt_likes {
+	padding: 4px;
+	border-top: 1px solid rgba(64, 64, 192, 0.25);
+	vertical-align: top;
+}
+
+.fbt_comment img {
+	float: left;
+	margin-right: 1em;
+	border: 1px solid #ddd;
+}
+
+.fbt_comment span {
+	vertical-align: top;
+}
+
 /* hide the facebook details by default */
 .fbt_hidden {
+	background-color: white;
+	border-bottom: 2px solid rgba(64, 64, 192, 0.25);
 	display: none;
 }
