@@ -44,7 +44,7 @@ add_shortcode('fbt-status', 'fbt_status_handler');
 add_shortcode('fbt-event', 'fbt_event_handler');
 
 /** add new media buttons */
-add_action('media_buttons', 'fbt_add_buttons', 15);
+// add_action('media_buttons', 'fbt_add_buttons', 15);
 
 
 /**
