@@ -43,21 +43,6 @@ add_shortcode('fbt-text', 'fbt_text_handler');
 add_shortcode('fbt-status', 'fbt_status_handler');
 add_shortcode('fbt-event', 'fbt_event_handler');
 
-/** add new media buttons */
-// add_action('media_buttons', 'fbt_add_buttons', 15);
-
-
-/**
- * Add new media button to let the user select a post
- *
- * @return void
- */
-function fbt_add_buttons()
-{
-	echo '<a href="#" id="fbt_add_post" class="button"><img src="' . plugins_url( 'FB-f-Logo__blue_20.png', __FILE__ ) . '" > Add Post</a>';
-	echo '<a href="#" id="fbt_add_event" class="button"><img src="' . plugins_url( 'FB-f-Logo__blue_20.png', __FILE__ ) . '" > Add Event</a>';
-}
-
 
 /**
  * Access the Facebook Graph API
