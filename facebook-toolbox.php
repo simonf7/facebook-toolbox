@@ -3,7 +3,7 @@
 Plugin Name: Facebook Toolbox
 Plugin URI: http://wwww.simonfoster.co.uk/facebook-toolbox
 Description: Provides various snippets for integrating Facebook in Wordpress posts
-Version: 0.03
+Version: 0.04
 Author: Simon Foster
 Author URI: http://www.simonfoster.co.uk
 */
@@ -15,6 +15,7 @@ $fbt_options = get_option('fbt_options');
 /** define plugin defaults using the Wordpress options */
 DEFINE('FBT_APP_ID', $fbt_options['fbt_app_id']);
 DEFINE('FBT_APP_SECRET', $fbt_options['fbt_app_secret']);
+DEFINE('FBT_PAGE_ID', $fbt_options['fbt_page_id']);
 
 if (!empty($fbt_options['debug_tick']) && $fbt_options['debug_tick']=='yes') {
 	DEFINE('FBT_DEBUG', 'yes');
@@ -35,11 +36,27 @@ function fbt_add_stylesheet() {
 	wp_enqueue_style('facebook-toolbox', plugins_url('facebook-toolbox.css', __FILE__), false, '0.0.2', 'all');
 }
 add_action('wp_enqueue_scripts', 'fbt_add_stylesheet', 99999);
+add_action('admin_enqueue_scripts', 'fbt_add_stylesheet');
 
 /** tell wordpress to register the shortcode */
 add_shortcode('fbt-text', 'fbt_text_handler');
 add_shortcode('fbt-status', 'fbt_status_handler');
 add_shortcode('fbt-event', 'fbt_event_handler');
+
+/** add new media buttons */
+add_action('media_buttons', 'fbt_add_buttons', 15);
+
+
+/**
+ * Add new media button to let the user select a post
+ *
+ * @return void
+ */
+function fbt_add_buttons()
+{
+	echo '<a href="#" id="fbt_add_post" class="button"><img src="' . plugins_url( 'FB-f-Logo__blue_20.png', __FILE__ ) . '" > Add Post</a>';
+	echo '<a href="#" id="fbt_add_event" class="button"><img src="' . plugins_url( 'FB-f-Logo__blue_20.png', __FILE__ ) . '" > Add Event</a>';
+}
 
 
 /**
@@ -264,14 +281,56 @@ function fbt_plugin_options() {
 		wp_die(__('You do not have sufficient permissions to access this page.'));
 	}
 ?>
-	<div>
-		<h2>Facebook Toolbox Settings</h2>
-		<form action="options.php" method="post">
-			<?php settings_fields('fbt_options'); ?>
-			<?php do_settings_sections('fbt_plugin'); ?>
+	<div class="fbt_admin_wrapper">
+		<h1>Facebook Toolbox Settings</h1>
+		<div class="fbt_admin_left">
+			<form action="options.php" method="post">
+				<?php settings_fields('fbt_options'); ?>
+				<?php do_settings_sections('fbt_plugin'); ?>
 
-			<input name="Submit" type="submit" class="button-primary" value="<?php esc_attr_e('Save Changes'); ?>" />
-		</form>
+				<input name="Submit" type="submit" class="button-primary" value="<?php esc_attr_e('Save Changes'); ?>" />
+			</form>
+		</div>
+		<div class="fbt_admin_right">
+			<h3>Posts</h3>
+<?php
+	if (empty(FBT_PAGE_ID)) {
+		echo '<p><i>To download posts, please enter a Page ID.</i></p>';
+	}
+	else {
+		$posts = fbt_api(FBT_PAGE_ID . '/posts');
+		if (empty($posts)) {
+			echo '<p><i>No posts found.</i></p>';
+		}
+		else {
+			foreach ($posts->data as $post) {
+				$detail = (empty($post->message) ? (empty($post->story) ? '' : $post->story) : $post->message);
+				if (!empty($detail)) {
+					echo '<p>' . substr($detail, 0, 100) . '...<br /><b><a href="https://www.facebook.com/' . $post->id . '" target="_blank">' . $post->id . '</a></b></p>';
+				}
+			}
+		}
+	}
+?>
+			<hr />
+			<h3>Events</h3>
+<?php
+	if (empty(FBT_PAGE_ID)) {
+		echo '<p><i>To download events, please enter a Page ID.</i></p>';
+	}
+	else {
+		$events = fbt_api(FBT_PAGE_ID . '/events');
+		if (empty($events)) {
+			echo '<p><i>No events found.</i></p>';
+		}
+		else {
+			foreach ($events->data as $event) {
+				echo '<p>' . $event->name . ' - ' . date('jS F Y', strtotime($event->start_time)) . '<br /><b><a href="https://www.facebook.com/' . $event->id . '" target="_blank">' . $event->id . '</a></b></p>';
+			}
+		}
+	}
+?>
+		</div>
 	</div>
 <?php
 }
@@ -285,7 +344,7 @@ add_action('admin_init', 'fbt_admin_init');
  * return @void
  */
 function fbt_main_section_text() {
-	echo '<p>Please enter your Facebook App details for accessing Facebook.</p>';
+	echo '<p>Please enter your Facebook App details for accessing the Facebook API.</p>';
 }
 
 /**
@@ -309,12 +368,31 @@ function fbt_app_secret_string() {
 }
 
 /** 
+ * Render introductory text for the page settings.
+ *
+ * return @void
+ */
+function fbt_page_section_text() {
+	echo '<p>Please enter a Page ID below to get a list of posts and events you can select form.</p>';
+}
+
+/**
+ * Render the text box for entering the Page ID.
+ *
+ * return @void
+ */
+function fbt_page_id_string() {
+	$options = get_option('fbt_options');
+	echo '<input id="fbt_page_id_string" name="fbt_options[fbt_page_id]" size="40" type="text" value="' . $options['fbt_page_id'] . '" />';
+}
+
+/** 
  * Render introductory text for the debug settings.
  *
  * return @void
  */
 function fbt_debug_section_text() {
-	echo '<p>In order for the plugin to use the specified date and year make sure the debug mode option is ticked.</p>';
+	echo '<p>Debug mode can be enabled below.</p>';
 }
 
 /**
@@ -341,6 +419,8 @@ function fbt_admin_init() {
 	add_settings_section('fbt_main', 'Access Settings', 'fbt_main_section_text', 'fbt_plugin');
 	add_settings_field('fbt_app_id_string', 'App ID', 'fbt_app_id_string', 'fbt_plugin', 'fbt_main');
 	add_settings_field('fbt_app_secret_string', 'App Secret', 'fbt_app_secret_string', 'fbt_plugin', 'fbt_main');
+	add_settings_section('fbt_page', 'Page Settings', 'fbt_page_section_text', 'fbt_plugin');
+	add_settings_field('fbt_page_id_string', 'Page ID', 'fbt_page_id_string', 'fbt_plugin', 'fbt_page');
 	add_settings_section('fbt_debug', 'Debug Settings', 'fbt_debug_section_text', 'fbt_plugin');
 	add_settings_field('fbt_debug_tick', 'Debug Mode', 'fbt_debug_tick', 'fbt_plugin', 'fbt_debug');
 }
@@ -354,6 +434,7 @@ function fbt_options_validate($input) {
 	$options = get_option('fbt_options');
 	$options['fbt_app_id'] = $input['fbt_app_id'];
 	$options['fbt_app_secret'] = $input['fbt_app_secret'];
+	$options['fbt_page_id'] = $input['fbt_page_id'];
 	if (empty($input['debug_tick'])) {
 		$options['debug_tick'] = 'no';
 	}

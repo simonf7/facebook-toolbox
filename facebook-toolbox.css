@@ -50,3 +50,22 @@
 	border-bottom: 2px solid rgba(64, 64, 192, 0.25);
 	display: none;
 }
+
+/* admin page styles */
+.fbt_admin_wrapper {
+	margin-right: 400px;
+	padding: 0;
+}
+
+.fbt_admin_left {
+	position: relative;
+	width: 100%;
+	min-width: 463px;
+	float: left;
+}
+
+.fbt_admin_right {
+	float: right;
+	margin-right: -400px;
+	width: 380px;
+}
