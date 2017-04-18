@@ -2,13 +2,13 @@
 
 /* container */
 .fbt_container {
-	background-color: white;
+	background-color: rgba(255,255,255,0.50);
 	margin-bottom: 1em;
 }
 
 /* smaller text */
 .fbt_smaller {
-	font-size: 0.8em;
+	font-size: 0.9em;
 }
 
 /* summary for facebook */
@@ -26,25 +26,27 @@
 	vertical-align: middle;
 }
 
-.fbt_comment, .fbt_likes {
+.fbt_likes {
 	padding: 4px;
 	border-top: 1px solid rgba(64, 64, 192, 0.25);
-	vertical-align: top;
+}
+
+.fbt_comment {
+	padding: 8px 4px;
+	border-top: 1px solid rgba(64, 64, 192, 0.25);
+	line-height: 1.2em;
+	overflow: auto;
 }
 
 .fbt_comment img {
 	float: left;
 	margin-right: 1em;
 	border: 1px solid #ddd;
-}
-
-.fbt_comment span {
-	vertical-align: top;
+	background-color: white;
 }
 
 /* hide the facebook details by default */
 .fbt_hidden {
-	background-color: white;
 	border-bottom: 2px solid rgba(64, 64, 192, 0.25);
 	display: none;
 }

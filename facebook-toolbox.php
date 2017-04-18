@@ -3,7 +3,7 @@
 Plugin Name: Facebook Toolbox
 Plugin URI: http://wwww.simonfoster.co.uk/facebook-toolbox
 Description: Provides various snippets for integrating Facebook in Wordpress posts
-Version: 0.02
+Version: 0.03
 Author: Simon Foster
 Author URI: http://www.simonfoster.co.uk
 */
@@ -21,12 +21,6 @@ if (!empty($fbt_options['debug_tick']) && $fbt_options['debug_tick']=='yes') {
 }
 else {
 	DEFINE('FBT_DEBUG', 'no');
-}
-if (!empty($fbt_options['cache_tick']) && $fbt_options['cache_tick']=='yes') {
-	DEFINE('FBT_CACHE', 'no');
-}
-else {
-	DEFINE('FBT_CACHE', 'yes');
 }
 
 
@@ -139,7 +133,7 @@ function fbt_status_handler($arrParameters)
 				$detail = $likes->data[0]->name . ', ' . $likes->data[1]->name . ' and ' . (count($likes->data) - 2) . ' others like this.';
 		}
 
-		$detail = '<div class="fbt_likes">' . $detail . '</div>';
+		$detail = '<div class="fbt_likes"><a href="https://www.facebook.com/' . $arrParameters['post'] . '" target="_blank">' . $detail . '</a></div>';
 	}
 
 	/** depending on the comments, express the detail */
@@ -152,7 +146,7 @@ function fbt_status_handler($arrParameters)
 			if (!empty($picture->data->url)) {
 				$detail .= '<a href="https://www.facebook.com/' . $comment->from->id . '" target="_blank"><img src="' . $picture->data->url . '" width="27"></a>';
 			}
-			$detail .= '<span><b>' . $comment->from->name . '</b> ' . $comment->message . '<br>' . date('jS F Y', strtotime($comment->created_time)) . '</span></div>';
+			$detail .= '<a href="https://www.facebook.com/' . $comment->from->id . '" target="_blank"><b>' . $comment->from->name . '</b></a> ' . $comment->message . '<br>' . date('jS F Y', strtotime($comment->created_time)) . '</div>';
 		}
 	}
 
@@ -210,7 +204,7 @@ function fbt_event_handler($arrParameters)
 				$detail = $attending->data[0]->name . ', ' . $attending->data[1]->name . ' and ' . (count($attending->data) - 2) . ' others are attending.';
 		}
 
-		$detail = '<div class="fbt_likes">' . $detail . '</div>';
+		$detail = '<div class="fbt_likes"><a href="https://www.facebook.com/' . $arrParameters['event'] . '" target="_blank">' . $detail . '</a></div>';
 	}
 
 	/** depending on the comments, express the detail */
@@ -276,7 +270,7 @@ function fbt_plugin_options() {
 			<?php settings_fields('fbt_options'); ?>
 			<?php do_settings_sections('fbt_plugin'); ?>
 
-			<input name="Submit" type="submit" value="<?php esc_attr_e('Save Changes'); ?>" />
+			<input name="Submit" type="submit" class="button-primary" value="<?php esc_attr_e('Save Changes'); ?>" />
 		</form>
 	</div>
 <?php
@@ -337,29 +331,6 @@ function fbt_debug_tick() {
 	echo ' />';
 }
 
-/** 
- * Render introductory text for the cache settings.
- *
- * return @void
- */
-function fbt_cache_section_text() {
-	echo '<p>If you would like to turn off the cache, please tick the option below.</p>';
-}
-
-/**
- * Render the checkbox for selecting caching.
- *
- * return @void
- */
-function fbt_cache_tick() {
-	$options = get_option('fbt_options');
-	echo '<input id="fbt_cache_tick" name="fbt_options[cache_tick]" type="checkbox" value="yes"';
-	if ($options['cache_tick']=='yes') {
-		echo ' checked';
-	}
-	echo ' />';
-}
-
 /**
  * Register all the sections that make up the settings screen for the plugin.
  *
@@ -372,8 +343,6 @@ function fbt_admin_init() {
 	add_settings_field('fbt_app_secret_string', 'App Secret', 'fbt_app_secret_string', 'fbt_plugin', 'fbt_main');
 	add_settings_section('fbt_debug', 'Debug Settings', 'fbt_debug_section_text', 'fbt_plugin');
 	add_settings_field('fbt_debug_tick', 'Debug Mode', 'fbt_debug_tick', 'fbt_plugin', 'fbt_debug');
-	add_settings_section('fbt_cache', 'Cache Settings', 'fbt_cache_section_text', 'fbt_plugin');
-	add_settings_field('fbt_cache_tick', 'Disable Cache', 'fbt_cache_tick', 'fbt_plugin', 'fbt_cache');
 }
 
 /**
@@ -390,12 +359,6 @@ function fbt_options_validate($input) {
 	}
 	else {
 		$options['debug_tick'] = $input['debug_tick'];
-	}
-	if (empty($input['cache_tick'])) {
-		$options['cache_tick'] = 'no';
-	}
-	else {
-		$options['cache_tick'] = $input['cache_tick'];
 	}
 
 	return $options;
