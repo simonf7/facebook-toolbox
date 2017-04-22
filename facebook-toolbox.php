@@ -3,7 +3,7 @@
 Plugin Name: Facebook Toolbox
 Plugin URI: http://wwww.simonfoster.co.uk/facebook-toolbox
 Description: Provides various snippets for integrating Facebook in Wordpress posts
-Version: 0.04
+Version: 0.05
 Author: Simon Foster
 Author URI: http://www.simonfoster.co.uk
 */
@@ -17,11 +17,24 @@ DEFINE('FBT_APP_ID', $fbt_options['fbt_app_id']);
 DEFINE('FBT_APP_SECRET', $fbt_options['fbt_app_secret']);
 DEFINE('FBT_PAGE_ID', $fbt_options['fbt_page_id']);
 
-if (!empty($fbt_options['debug_tick']) && $fbt_options['debug_tick']=='yes') {
+if (!empty($fbt_options['fbt_debug_tick']) && $fbt_options['fbt_debug_tick']=='yes') {
 	DEFINE('FBT_DEBUG', 'yes');
 }
 else {
 	DEFINE('FBT_DEBUG', 'no');
+}
+
+if (!empty($fbt_options['fbt_cache_time'])) {
+	DEFINE('FBT_CACHE_TIME', $fbt_options['fbt_cache_time']);
+}
+else {
+	DEFINE('FBT_CACHE_TIME', 600);
+}
+if (!empty($fbt_options['fbt_cache_tick']) && $fbt_options['fbt_cache_tick']=='yes') {
+	DEFINE('FBT_CACHE', 'no');
+}
+else {
+	DEFINE('FBT_CACHE', 'yes');
 }
 
 
@@ -111,59 +124,73 @@ function fbt_text_handler($arrParameters)
  */
 function fbt_status_handler($arrParameters)
 {
-	$likes = fbt_api($arrParameters['post'] . '/likes');
-	$comments = fbt_api($arrParameters['post'] . '/comments');
-
-	$summary = count($likes->data) . ' like' . (count($likes->data)==1 ? '' : 's') . ' &bull; ' . count($comments->data) . ' comment' . (count($comments->data)==1 ? '' : 's');
-
-	// depending on how many likes we have, express the names as text
-	if (count($likes->data)>0) {
-		switch (count($likes->data)) {
-			case 1: 
-				$detail = $likes->data[0]->name . ' likes this.';
-				break;
-
-			case 2:
-				$detail = $likes->data[0]->name . ' and ' . $likes->data[1]->name . ' like this.';
-				break;
-
-			case 3:
-				$detail = $likes->data[0]->name . ', ' . $likes->data[1]->name . ' and ' . $likes->data[2]->name . ' like this.';
-				break;
-
-			default:
-				$detail = $likes->data[0]->name . ', ' . $likes->data[1]->name . ' and ' . (count($likes->data) - 2) . ' others like this.';
-		}
-
-		$detail = '<div class="fbt_likes"><a href="https://www.facebook.com/' . $arrParameters['post'] . '" target="_blank">' . $detail . '</a></div>';
+	/** check the wordpress cache */
+	if (FBT_CACHE=='yes') {
+		$ret = get_transient('fbt_post_' . $arrParameters['post']);
 	}
+	else {
+		$ret = false;
+	}
+	
+	/** if no cache value, get data from Facebook */
+	if ($ret===false) {
+		$likes = fbt_api($arrParameters['post'] . '/likes');
+		$comments = fbt_api($arrParameters['post'] . '/comments');
 
-	/** depending on the comments, express the detail */
-	if (count($comments->data)>0) {
-		foreach ($comments->data as $comment) {
-//			$detail .= '<hr>';
-			$detail .= '<div class="fbt_comment">';
-			$picture = fbt_api($comment->from->id . '/picture', '&redirect=0');
-//			$detail .= '(' . $picture->data->url . ')';
-			if (!empty($picture->data->url)) {
-				$detail .= '<a href="https://www.facebook.com/' . $comment->from->id . '" target="_blank"><img src="' . $picture->data->url . '" width="27"></a>';
+		$summary = count($likes->data) . ' like' . (count($likes->data)==1 ? '' : 's') . ' &bull; ' . count($comments->data) . ' comment' . (count($comments->data)==1 ? '' : 's');
+
+		/** depending on how many likes we have, express the names as text */
+		if (count($likes->data)>0) {
+			switch (count($likes->data)) {
+				case 1: 
+					$detail = $likes->data[0]->name . ' likes this.';
+					break;
+
+				case 2:
+					$detail = $likes->data[0]->name . ' and ' . $likes->data[1]->name . ' like this.';
+					break;
+
+				case 3:
+					$detail = $likes->data[0]->name . ', ' . $likes->data[1]->name . ' and ' . $likes->data[2]->name . ' like this.';
+					break;
+
+				default:
+					$detail = $likes->data[0]->name . ', ' . $likes->data[1]->name . ' and ' . (count($likes->data) - 2) . ' others like this.';
 			}
-			$detail .= '<a href="https://www.facebook.com/' . $comment->from->id . '" target="_blank"><b>' . $comment->from->name . '</b></a> ' . $comment->message . '<br>' . date('jS F Y', strtotime($comment->created_time)) . '</div>';
+
+			$detail = '<div class="fbt_likes"><a href="https://www.facebook.com/' . $arrParameters['post'] . '" target="_blank">' . $detail . '</a></div>';
 		}
+
+		/** depending on the comments, express the detail */
+		if (count($comments->data)>0) {
+			foreach ($comments->data as $comment) {
+	//			$detail .= '<hr>';
+				$detail .= '<div class="fbt_comment">';
+				$picture = fbt_api($comment->from->id . '/picture', '&redirect=0');
+	//			$detail .= '(' . $picture->data->url . ')';
+				if (!empty($picture->data->url)) {
+					$detail .= '<a href="https://www.facebook.com/' . $comment->from->id . '" target="_blank"><img src="' . $picture->data->url . '" width="27"></a>';
+				}
+				$detail .= '<a href="https://www.facebook.com/' . $comment->from->id . '" target="_blank"><b>' . $comment->from->name . '</b></a> ' . $comment->message . '<br>' . date('jS F Y', strtotime($comment->created_time)) . '</div>';
+			}
+		}
+
+		$ret = '<div class="fbt_container">';
+		$ret .= '<div id="click_' . $arrParameters['post'] . '" class="fbt_summary fbt_smaller">';
+		$ret .= '<a href="https://www.facebook.com/' . $arrParameters['post'] . '" target="_blank">';
+		$ret .= '<img src="' . plugins_url( 'FB-f-Logo__blue_29.png', __FILE__ ) . '" >';
+		$ret .= '</a>';
+		$ret .= '<span>' . $summary . '</span>';
+		$ret .= '</div>';
+		$ret .= '<div id="detail_' . $arrParameters['post'] . '" class="fbt_hidden fbt_smaller">' . $detail . '</div>';
+		$ret .= '</div>';
+		$ret .= '<script>jQuery(\'#click_' . $arrParameters['post'] . '\').on(\'click\', function() {';
+		$ret .= ' jQuery(\'#detail_' . $arrParameters['post'] . '\').slideToggle(); ';
+		$ret .= '}); </script>';
 	}
 
-	$ret = '<div class="fbt_container">';
-	$ret .= '<div id="click_' . $arrParameters['post'] . '" class="fbt_summary fbt_smaller">';
-	$ret .= '<a href="https://www.facebook.com/' . $arrParameters['post'] . '" target="_blank">';
-	$ret .= '<img src="' . plugins_url( 'FB-f-Logo__blue_29.png', __FILE__ ) . '" >';
-	$ret .= '</a>';
-	$ret .= '<span>' . $summary . '</span>';
-	$ret .= '</div>';
-	$ret .= '<div id="detail_' . $arrParameters['post'] . '" class="fbt_hidden fbt_smaller">' . $detail . '</div>';
-	$ret .= '</div>';
-	$ret .= '<script>jQuery(\'#click_' . $arrParameters['post'] . '\').on(\'click\', function() {';
-	$ret .= ' jQuery(\'#detail_' . $arrParameters['post'] . '\').slideToggle(); ';
-	$ret .= '}); </script>';
+	/** store the result in the wordpress cache */
+	set_transient('fbt_post_' . $arrParameters['post'], $ret, FBT_CACHE_TIME);
 
 	return $ret;
 }
@@ -181,60 +208,74 @@ function fbt_status_handler($arrParameters)
  */
 function fbt_event_handler($arrParameters)
 {
-	$attending = fbt_api($arrParameters['event'] . '/attending');
-	$interested = fbt_api($arrParameters['event'] . '/interested');
-	$comments = fbt_api($arrParameters['event'] . '/comments');
-
-	$summary = count($attending->data) . ' attending &bull; ' . count($interested->data) . ' interested';
-
-	// depending on how many likes we have, express the names as text
-	if (count($attending->data)>0) {
-		switch (count($attending->data)) {
-			case 1: 
-				$detail = $attending->data[0]->name . ' is attending.';
-				break;
-
-			case 2:
-				$detail = $attending->data[0]->name . ' and ' . $attending->data[1]->name . ' are attending.';
-				break;
-
-			case 3:
-				$detail = $attending->data[0]->name . ', ' . $attending->data[1]->name . ' and ' . $attending->data[2]->name . ' are attending.';
-				break;
-
-			default:
-				$detail = $attending->data[0]->name . ', ' . $attending->data[1]->name . ' and ' . (count($attending->data) - 2) . ' others are attending.';
-		}
-
-		$detail = '<div class="fbt_likes"><a href="https://www.facebook.com/' . $arrParameters['event'] . '" target="_blank">' . $detail . '</a></div>';
+	/** check the wordpress cache */
+	if (FBT_CACHE=='yes') {
+		$ret = get_transient('fbt_event_' . $arrParameters['event']);
 	}
+	else {
+		$ret = false;
+	}
+	
+	/** if no cache value, get data from Facebook */
+	if ($ret===false) {
+		$attending = fbt_api($arrParameters['event'] . '/attending');
+		$interested = fbt_api($arrParameters['event'] . '/interested');
+		$comments = fbt_api($arrParameters['event'] . '/comments');
 
-	/** depending on the comments, express the detail */
-	if (count($comments->data)>0) {
-		foreach ($comments->data as $comment) {
-//			$detail .= '<hr>';
-			$detail .= '<div class="fbt_comment">';
-			$picture = fbt_api($comment->from->id . '/picture', '&redirect=0');
-//			$detail .= '(' . $picture->data->url . ')';
-			if (!empty($picture->data->url)) {
-				$detail .= '<a href="https://www.facebook.com/' . $comment->from->id . '" target="_blank"><img src="' . $picture->data->url . '" width="27"></a>';
+		$summary = count($attending->data) . ' attending &bull; ' . count($interested->data) . ' interested';
+
+		// depending on how many likes we have, express the names as text
+		if (count($attending->data)>0) {
+			switch (count($attending->data)) {
+				case 1: 
+					$detail = $attending->data[0]->name . ' is attending.';
+					break;
+
+				case 2:
+					$detail = $attending->data[0]->name . ' and ' . $attending->data[1]->name . ' are attending.';
+					break;
+
+				case 3:
+					$detail = $attending->data[0]->name . ', ' . $attending->data[1]->name . ' and ' . $attending->data[2]->name . ' are attending.';
+					break;
+
+				default:
+					$detail = $attending->data[0]->name . ', ' . $attending->data[1]->name . ' and ' . (count($attending->data) - 2) . ' others are attending.';
 			}
-			$detail .= '<span><b>' . $comment->from->name . '</b> ' . $comment->message . '<br>' . date('jS F Y', strtotime($comment->created_time)) . '</span></div>';
+
+			$detail = '<div class="fbt_likes"><a href="https://www.facebook.com/' . $arrParameters['event'] . '" target="_blank">' . $detail . '</a></div>';
 		}
+
+		/** depending on the comments, express the detail */
+		if (count($comments->data)>0) {
+			foreach ($comments->data as $comment) {
+	//			$detail .= '<hr>';
+				$detail .= '<div class="fbt_comment">';
+				$picture = fbt_api($comment->from->id . '/picture', '&redirect=0');
+	//			$detail .= '(' . $picture->data->url . ')';
+				if (!empty($picture->data->url)) {
+					$detail .= '<a href="https://www.facebook.com/' . $comment->from->id . '" target="_blank"><img src="' . $picture->data->url . '" width="27"></a>';
+				}
+				$detail .= '<span><b>' . $comment->from->name . '</b> ' . $comment->message . '<br>' . date('jS F Y', strtotime($comment->created_time)) . '</span></div>';
+			}
+		}
+
+		$ret = '<div class="fbt_container">';
+		$ret .= '<div id="click_' . $arrParameters['event'] . '" class="fbt_summary fbt_smaller">';
+		$ret .= '<a href="https://www.facebook.com/' . $arrParameters['event'] . '" target="_blank">';
+		$ret .= '<img src="' . plugins_url( 'FB-f-Logo__blue_29.png', __FILE__ ) . '" >';
+		$ret .= '</a>';
+		$ret .= '<span>' . $summary . '</span>';
+		$ret .= '</div>';
+		$ret .= '<div id="detail_' . $arrParameters['event'] . '" class="fbt_hidden fbt_smaller">' . $detail . '</div>';
+		$ret .= '</div>';
+		$ret .= '<script>jQuery(\'#click_' . $arrParameters['event'] . '\').on(\'click\', function() {';
+		$ret .= ' jQuery(\'#detail_' . $arrParameters['event'] . '\').slideToggle(); ';
+		$ret .= '}); </script>';
 	}
 
-	$ret = '<div class="fbt_container">';
-	$ret .= '<div id="click_' . $arrParameters['event'] . '" class="fbt_summary fbt_smaller">';
-	$ret .= '<a href="https://www.facebook.com/' . $arrParameters['event'] . '" target="_blank">';
-	$ret .= '<img src="' . plugins_url( 'FB-f-Logo__blue_29.png', __FILE__ ) . '" >';
-	$ret .= '</a>';
-	$ret .= '<span>' . $summary . '</span>';
-	$ret .= '</div>';
-	$ret .= '<div id="detail_' . $arrParameters['event'] . '" class="fbt_hidden fbt_smaller">' . $detail . '</div>';
-	$ret .= '</div>';
-	$ret .= '<script>jQuery(\'#click_' . $arrParameters['event'] . '\').on(\'click\', function() {';
-	$ret .= ' jQuery(\'#detail_' . $arrParameters['event'] . '\').slideToggle(); ';
-	$ret .= '}); </script>';
+	/** store the result in the wordpress cache */
+	set_transient('fbt_event_' . $arrParameters['event'], $ret, FBT_CACHE_TIME);
 
 	return $ret;
 }
@@ -387,11 +428,44 @@ function fbt_debug_section_text() {
  */
 function fbt_debug_tick() {
 	$options = get_option('fbt_options');
-	echo '<input id="fbt_debug_tick" name="fbt_options[debug_tick]" type="checkbox" value="yes"';
-	if ($options['debug_tick']=='yes') {
+	echo '<input id="fbt_debug_tick" name="fbt_options[fbt_debug_tick]" type="checkbox" value="yes"';
+	if ($options['fbt_debug_tick']=='yes') {
 		echo ' checked';
 	}
 	echo ' />';
+}
+
+/** 
+ * Render introductory text for the cache settings.
+ *
+ * return @void
+ */
+function fbt_cache_section_text() {
+	echo '<p>If you would like to turn off the cache, please tick the option below. You can also set how long the data is cached for in seconds.</p>';
+}
+
+/**
+ * Render the checkbox for turning off the cache.
+ *
+ * return @void
+ */
+function fbt_cache_tick() {
+	$options = get_option('nka_options');
+	echo '<input id="fbt_cache_tick" name="fbt_options[fbt_cache_tick]" type="checkbox" value="yes"';
+	if ($options['fbt_cache_tick']=='yes') {
+		echo ' checked';
+	}
+	echo ' />';
+}
+
+/**
+ * Render the text box for entering the cache time.
+ *
+ * return @void
+ */
+function fbt_cache_time_string() {
+	$options = get_option('fbt_options');
+	echo '<input id="fbt_cache_time_string" name="fbt_options[fbt_cache_time]" size="40" type="text" value="' . $options['fbt_cache_time'] . '" /> (default 600 seconds)';
 }
 
 /**
@@ -408,6 +482,9 @@ function fbt_admin_init() {
 	add_settings_field('fbt_page_id_string', 'Page ID', 'fbt_page_id_string', 'fbt_plugin', 'fbt_page');
 	add_settings_section('fbt_debug', 'Debug Settings', 'fbt_debug_section_text', 'fbt_plugin');
 	add_settings_field('fbt_debug_tick', 'Debug Mode', 'fbt_debug_tick', 'fbt_plugin', 'fbt_debug');
+	add_settings_section('fbt_cache', 'Cache Settings', 'fbt_cache_section_text', 'fbt_plugin');
+	add_settings_field('fbt_cache_tick', 'Disable Cache', 'fbt_cache_tick', 'fbt_plugin', 'fbt_cache');
+	add_settings_field('fbt_cache_time_string', 'Cache Expiry', 'fbt_cache_time_string', 'fbt_plugin', 'fbt_cache');
 }
 
 /**
@@ -420,12 +497,19 @@ function fbt_options_validate($input) {
 	$options['fbt_app_id'] = $input['fbt_app_id'];
 	$options['fbt_app_secret'] = $input['fbt_app_secret'];
 	$options['fbt_page_id'] = $input['fbt_page_id'];
-	if (empty($input['debug_tick'])) {
-		$options['debug_tick'] = 'no';
+	if (empty($input['fbt_debug_tick'])) {
+		$options['fbt_debug_tick'] = 'no';
 	}
 	else {
-		$options['debug_tick'] = $input['debug_tick'];
+		$options['fbt_debug_tick'] = $input['fbt_debug_tick'];
 	}
+	if (empty($input['fbt_cache_tick'])) {
+		$options['fbt_cache_tick'] = 'no';
+	}
+	else {
+		$options['fbt_cache_tick'] = $input['fbt_cache_tick'];
+	}
+	$options['fbt_cache_time'] = $input['fbt_cache_time'];
 
 	return $options;
 }
