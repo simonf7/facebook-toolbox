@@ -187,10 +187,10 @@ function fbt_status_handler($arrParameters)
 		$ret .= '<script>jQuery(\'#click_' . $arrParameters['post'] . '\').on(\'click\', function() {';
 		$ret .= ' jQuery(\'#detail_' . $arrParameters['post'] . '\').slideToggle(); ';
 		$ret .= '}); </script>';
-	}
 
-	/** store the result in the wordpress cache */
-	set_transient('fbt_post_' . $arrParameters['post'], $ret, FBT_CACHE_TIME);
+		/** store the result in the wordpress cache */
+		set_transient('fbt_post_' . $arrParameters['post'], $ret, FBT_CACHE_TIME);
+	}
 
 	return $ret;
 }
@@ -272,10 +272,10 @@ function fbt_event_handler($arrParameters)
 		$ret .= '<script>jQuery(\'#click_' . $arrParameters['event'] . '\').on(\'click\', function() {';
 		$ret .= ' jQuery(\'#detail_' . $arrParameters['event'] . '\').slideToggle(); ';
 		$ret .= '}); </script>';
-	}
 
-	/** store the result in the wordpress cache */
-	set_transient('fbt_event_' . $arrParameters['event'], $ret, FBT_CACHE_TIME);
+		/** store the result in the wordpress cache */
+		set_transient('fbt_event_' . $arrParameters['event'], $ret, FBT_CACHE_TIME);
+	}
 
 	return $ret;
 }
